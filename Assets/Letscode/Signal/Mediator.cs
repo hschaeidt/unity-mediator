@@ -225,6 +225,9 @@ namespace Letscode.Signal
 		/// </summary>
 		void UpdateFrameCount()
 		{
+			// We need this here because Time methods access native code which is not available
+			// while testing. It is recommended to only disable it for unit testing or if you want
+			// to have full control over eventing without being frame dependant
 			if (!ignoreFrameCount) {
 				if (Time.frameCount > lastFrame) {
 					lastFrame = Time.frameCount;
@@ -234,7 +237,17 @@ namespace Letscode.Signal
 		}
 
 		/// <summary>
+		/// Use with caution!
+		/// It is only used by unit-tests in our use-cases!
+		/// </summary>
+		public void ClearFrameEvents()
+		{
+			frameEvents.Clear ();
+		}
+
+		/// <summary>
 		/// Ignores the frame count.
+		/// Used to disable frameCounting. Use it only if you want to have a frame independant Mediator instance.
 		/// </summary>
 		public bool ignoreFrameCount = false;
 	}
