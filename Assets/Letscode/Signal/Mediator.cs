@@ -152,6 +152,7 @@ namespace Letscode.Signal
 		/// <param name="args">Arguments.</param>
 		public void DirectPublish(string eventName, object sender, Dictionary<string, object> args = null)
 		{
+			UpdateFrameCount ();
 			List<ISubscriber> invalids = new List<ISubscriber> ();
 			if (directSubscribers.ContainsKey (eventName)) {
 				foreach (ISubscriber subscriber in directSubscribers[eventName]) {
@@ -177,6 +178,7 @@ namespace Letscode.Signal
 		/// <param name="args">Arguments.</param>
 		public void CallbackPublish(string eventName, object sender, Dictionary<string, object> args = null)
 		{
+			UpdateFrameCount ();
 			if (callbackSubscribers.ContainsKey (eventName)) {
 				callbackSubscribers [eventName] (sender, args);
 			}
