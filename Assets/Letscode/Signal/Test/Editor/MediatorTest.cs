@@ -13,6 +13,8 @@ namespace Letscode.Signal.Test
 		public interface IDummyGameObject
 		{
 			void DoSomething (object sender, Dictionary<string, object> args);
+			void DoSomethingWithArgs (Dictionary<string, object> args);
+			void DoSomethingWithoutArguments ();
 		}
 
 		object sender = null;
@@ -215,6 +217,36 @@ namespace Letscode.Signal.Test
 			dgo1.Received(10).DoSomething(sender, args);
 		}
 
+		[Test]
+		public void SubscribeAndPublishWithArgs(){
+			// Given
+			string eventName = "SubscribeAndPublishWithArgs";
+			IDummyGameObject dgo = Substitute.For<IDummyGameObject> ();
+			Mediator.Instance.ignoreFrameCount = true;
+
+			// When
+			Mediator.Publish (eventName, args);
+			Mediator.Subscribe (eventName, dgo.DoSomethingWithArgs);
+
+			//Then
+			dgo.Received(1).DoSomethingWithArgs(args);
+		}
+
+		[Test]
+		public void SubscribeAndPublishWithoutArguments(){
+			// Given
+			string eventName = "SubscribeAndPublishWithoutArguments";
+			IDummyGameObject dgo = Substitute.For<IDummyGameObject> ();
+			Mediator.Instance.ignoreFrameCount = true;
+
+			// When
+			Mediator.Publish (eventName);
+			Mediator.Subscribe (eventName, dgo.DoSomethingWithoutArguments);
+
+			//Then
+			dgo.Received(1).DoSomethingWithoutArguments();
+		}
+
 		/// <summary>
 		/// If the program crashes something's wrong?
 		/// </summary>
@@ -222,7 +254,7 @@ namespace Letscode.Signal.Test
 		public void UnsubscribeWithoutSubscribing()
 		{
 			IDummyGameObject dgo1 = Substitute.For<IDummyGameObject> ();
-			Mediator.Unsubscribe ("mumu", dgo1.DoSomething);
+			Mediator.Unsubscribe ("ShouldNotThrow", dgo1.DoSomething);
 		}
 	}
 }
