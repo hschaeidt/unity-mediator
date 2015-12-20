@@ -35,7 +35,7 @@ namespace Letscode.Signal
 		/// Dictionary containing a list of all events that have been
 		/// published during this frame
 		/// </summary>
-		Dictionary<string, Dictionary<string, object>> frameEvents;
+		Dictionary<string, List<Dictionary<string, object>>> frameEvents;
 
 		/// <summary>
 		/// Direct subscribers call the ISubscriber SignalDispatcher method on the subscribed object.
@@ -52,7 +52,7 @@ namespace Letscode.Signal
 			//Init
 			directSubscribers = new Dictionary<string, List<ISubscriber>> ();
 			callbackSubscribers = new Dictionary<string, CallbackSubscriber> ();
-			frameEvents = new Dictionary<string, Dictionary<string, object>>();
+			frameEvents = new Dictionary<string, List<Dictionary<string, object>>>();
 		}
 
 		/// <summary>
@@ -72,6 +72,7 @@ namespace Letscode.Signal
 
 		/// <summary>
 		/// Subscribe the specified callback to eventName.
+		/// Unsubscribe must be handled manually on the objects destructor using the Mediator.Unsubscribe
 		/// </summary>
 		/// <param name="eventName">Event name.</param>
 		/// <param name="callback">Callback.</param>
@@ -88,6 +89,26 @@ namespace Letscode.Signal
 		public static void Subscribe(string eventName, ISubscriber subscriber)
 		{
 			Instance.DirectSubscribe (eventName, subscriber);
+		}
+
+		/// <summary>
+		/// Unsubscribe the specified callback from eventName.
+		/// </summary>
+		/// <param name="eventName">Event name.</param>
+		/// <param name="callback">Callback.</param>
+		public static void Unsubscribe(string eventName, CallbackSubscriber callback)
+		{
+			Instance.CallbackUnsubscribe (eventName, callback);
+		}
+
+		/// <summary>
+		/// Unsubscribe the specified subscriber from eventName.
+		/// </summary>
+		/// <param name="eventName">Event name.</param>
+		/// <param name="subscriber">Subscriber.</param>
+		public static void Unsubscribe(string eventName, ISubscriber subscriber)
+		{
+			Instance.DirectUnsubscribe (eventName, subscriber);
 		}
 
 		/// <summary>
@@ -126,7 +147,37 @@ namespace Letscode.Signal
 			}
 
 			if (WasEventPublishedThisFrame (eventName)) {
-				callback(frameEvents[eventName]["sender"], (Dictionary<string, object>)frameEvents[eventName]["args"]);
+				foreach (Dictionary<string, object> item in frameEvents[eventName]) {
+					callback(item["sender"], (Dictionary<string, object>)item["args"]);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Unsubscribes the callback.
+		/// </summary>
+		/// <param name="eventName">Event name.</param>
+		/// <param name="callback">Callback.</param>
+		void CallbackUnsubscribe(string eventName, CallbackSubscriber callback)
+		{
+			UpdateFrameCount ();
+			if (callbackSubscribers.ContainsKey (eventName)) {
+				callbackSubscribers [eventName] -= callback;
+			}
+		}
+
+		/// <summary>
+		/// Unsubscribes the subscriber.
+		/// </summary>
+		/// <param name="eventName">Event name.</param>
+		/// <param name="subscriber">Subscriber.</param>
+		void DirectUnsubscribe(string eventName, ISubscriber subscriber)
+		{
+			UpdateFrameCount ();
+			if (directSubscribers.ContainsKey (eventName)) {
+				if (directSubscribers [eventName].Contains (subscriber)) {
+					directSubscribers [eventName].Remove (subscriber);
+				}
 			}
 		}
 
@@ -180,7 +231,8 @@ namespace Letscode.Signal
 		{
 			UpdateFrameCount ();
 			if (callbackSubscribers.ContainsKey (eventName)) {
-				callbackSubscribers [eventName] (sender, args);
+				if (callbackSubscribers [eventName] != null)
+					callbackSubscribers [eventName] (sender, args);
 			}
 		}
 
@@ -191,11 +243,13 @@ namespace Letscode.Signal
 		void UpdateSubscriber(string eventName, ISubscriber subscriber)
 		{
 			if (frameEvents.ContainsKey (eventName) && directSubscribers.ContainsKey(eventName)) {
-				subscriber.EventDispatcher(
-					eventName,
-					frameEvents[eventName]["sender"],
-					(Dictionary<string, object>)frameEvents[eventName]["args"]
-				);
+				foreach (Dictionary<string, object> item in frameEvents[eventName]) {
+					subscriber.EventDispatcher(
+						eventName,
+						item["sender"],
+						(Dictionary<string, object>)item["args"]
+					);
+				}
 			}
 		}
 
@@ -216,7 +270,11 @@ namespace Letscode.Signal
 		/// <param name="args">Arguments.</param>
 		public void AddFrameEvent(string eventName, object sender, Dictionary<string, object> args = null)
 		{
-			frameEvents.Add (eventName, new Dictionary<string, object> {
+			if (!WasEventPublishedThisFrame (eventName)) {
+				frameEvents [eventName] = new List<Dictionary<string, object>>();
+			}
+
+			frameEvents[eventName].Add (new Dictionary<string, object> {
 				{ "sender", sender },
 				{ "args", args }
 			});

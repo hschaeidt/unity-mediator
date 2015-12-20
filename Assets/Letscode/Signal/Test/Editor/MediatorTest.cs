@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -176,6 +177,52 @@ namespace Letscode.Signal.Test
 			sub1.Received (2).EventDispatcher (eventName, sender, args);
 			lateCallbackSub.Received (1).DoSomething (sender, args);
 			lateDirectSub.Received (1).EventDispatcher (eventName, sender, args);
+		}
+
+		[Test]
+		public void CallbackIsUnsubscribed()
+		{
+			// Given
+			string eventName = "CallbackIsUnsubscribed";
+			IDummyGameObject dgo1 = Substitute.For<IDummyGameObject> ();
+			Mediator.Instance.ignoreFrameCount = true;
+
+			// When
+			Mediator.Subscribe(eventName, dgo1.DoSomething);
+			Mediator.Publish (eventName, sender, args);
+			Mediator.Unsubscribe (eventName, dgo1.DoSomething);
+			Mediator.Publish (eventName, sender, args);
+
+			// Then
+			dgo1.Received(1).DoSomething(sender, args);
+		}
+
+		[Test]
+		public void PublishMultipleEventsWithinSameFrame()
+		{
+			// Given
+			string eventName = "PublishMultipleEventsWithinSameFrame";
+			IDummyGameObject dgo1 = Substitute.For<IDummyGameObject> ();
+			Mediator.Instance.ignoreFrameCount = true;
+
+			// When
+			for (int i = 0; i < 10; ++i) {
+				Mediator.Publish (eventName, sender, args);
+			}
+			Mediator.Subscribe (eventName, dgo1.DoSomething);
+
+			// Then
+			dgo1.Received(10).DoSomething(sender, args);
+		}
+
+		/// <summary>
+		/// If the program crashes something's wrong?
+		/// </summary>
+		[Test]
+		public void UnsubscribeWithoutSubscribing()
+		{
+			IDummyGameObject dgo1 = Substitute.For<IDummyGameObject> ();
+			Mediator.Unsubscribe ("mumu", dgo1.DoSomething);
 		}
 	}
 }
